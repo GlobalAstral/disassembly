@@ -16,6 +16,7 @@ fn main() -> Result<(), DSAsmError>{
   };
 
   let raw = args.contains(&"-raw".to_string());
+  let debug = args.contains(&"-debug".to_string());
   let content: String = fs::read_to_string(fname).map_err(|e| Err::<File, DSAsmError>(DSAsmError::FileError(format!("{}", e))))?;
 
   let mut tokenizer: Tokenizer = Tokenizer::new(content.chars().collect());
@@ -23,10 +24,23 @@ fn main() -> Result<(), DSAsmError>{
     tokenizer.tokenize()
   } else {
     let tokens = tokenizer.tokenize()?;
+    if debug {
+      println!("\nTOKENS:");
+      tokens.iter().for_each(|t| println!("{}", t));
+    }
     let mut parser = Parser::new(tokens);
-    let _ = parser.parse_all()?;
+    let nodes = parser.parse_all()?;
+    if debug {
+      println!("\nNODES:");
+      nodes.iter().for_each(|e| println!("{}", e));
+    }
     unimplemented!()
   }?;
+
+  if debug {
+    println!("\nGENERATED:");
+    tokens.iter().for_each(|t| println!("{}", t));
+  }
 
   let mut interpreter: Interpreter = Interpreter::new(tokens);
 

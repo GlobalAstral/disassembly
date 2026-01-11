@@ -8,8 +8,8 @@ pub enum Token {
   RightAngle,
   Plus,
   Minus,
-  Out,
-  In,
+  Dot,
+  Comma,
   LabelDef,
   Jmp,
   Jze,
@@ -27,6 +27,17 @@ pub enum Token {
   Pipe,
   OpenParen,
   CloseParen,
+  Let,
+  OpenCurly,
+  CloseCurly,
+  If,
+  While,
+  For,
+  Putchar,
+  Return,
+  Method,
+  Getchar,
+  Semicolon,
 
   #[default]
   Invalid
@@ -63,8 +74,8 @@ impl Tokenizer {
         '<' => Token::LeftAngle,
         '+' => Token::Plus,
         '-' => Token::Minus,
-        '.' => Token::Out,
-        ',' => Token::In,
+        '.' => Token::Dot,
+        ',' => Token::Comma,
         ':' => Token::LabelDef,
         '@' => Token::Jmp,
         '?' => Token::Jze,
@@ -79,6 +90,9 @@ impl Tokenizer {
         '&' => Token::Ampersand,
         '(' => Token::OpenParen,
         ')' => Token::CloseParen,
+        '{' => Token::OpenCurly,
+        '}' => Token::CloseCurly,
+        ';' => Token::Semicolon,
         ch => {
           if ch == '\n' {
             self.line += 1;
@@ -92,7 +106,20 @@ impl Tokenizer {
             while self.base.peek().is_alphabetic() {
               buf.push(self.base.consume());
             };
-            Token::Identifier(buf)
+
+            match buf.as_str() {
+              "let" => Token::Let,
+              "if" => Token::If,
+              "while" => Token::While,
+              "for" => Token::For,
+              "putchar" => Token::Putchar,
+              "return" => Token::Return,
+              "method" => Token::Method,
+              "getchar" => Token::Getchar,
+              buf => {
+                Token::Identifier(buf.to_string())
+              }
+            }
           } else if ch.is_digit(10) {
             let mut buf = String::from(ch);
             while self.base.peek().is_digit(10) {

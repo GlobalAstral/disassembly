@@ -54,13 +54,13 @@ impl Interpreter {
           let tmp: u8 = self.stack[self.stack_ptr];
           self.stack[self.stack_ptr] = tmp.wrapping_sub(1);
         },
-        Token::In => {
+        Token::Comma => {
           stdout().flush().ok();
           let mut buf: [u8; 1] = [0];
           stdin().read_exact(&mut buf).expect("Cannot read user input");
           self.stack[self.stack_ptr] = buf[0];
         },
-        Token::Out => {
+        Token::Dot => {
           print!("{}", self.stack[self.stack_ptr] as char);
         },
         Token::LabelDef => {
