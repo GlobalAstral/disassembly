@@ -137,7 +137,8 @@ pub enum Node {
   While(Expr, Box<Node>),
   For(ForLoop),
   Putchar(Expr),
-  MethodDecl(Method)
+  MethodDecl(Method),
+  Return(Expr),
 }
 
 impl Display for Node {
@@ -154,7 +155,8 @@ impl Display for Node {
       Self::While(ex, body) => { write!(f, "while ({}) {}", ex, body)?; },
       Self::If(ex, body) => { write!(f, "if ({}) {}", ex, body)?; },
       Self::For(forloop) => { write!(f, "for ({} = {}; {}; {}) {}", forloop.var_name, forloop.start, forloop.condition, forloop.increment, forloop.body)?; },
-      Self::MethodDecl(method) => { write!(f, "method {}[{}]({}) {}", method.name, method.id, method.parameters.join(", "), method.body)?; }
+      Self::MethodDecl(method) => { write!(f, "method {}[{}]({}) {}", method.name, method.id, method.parameters.join(", "), method.body)?; },
+      Self::Return(e) => { write!(f, "return {}", e)?; }
     };
     Ok(())
   }
@@ -165,7 +167,7 @@ fn generate_id() -> u64 {
   CURRENT_ID.fetch_add(1, Ordering::Relaxed)
 }
 #[derive(Debug, Clone)]
-struct Method {
+pub struct Method {
   name: String,
   id: u64,
   parameters: Vec<String>,
@@ -348,6 +350,7 @@ impl Parser {
       Token::If => Node::If(self.parseExpr(false)?, Box::new(self.parse()?)),
       Token::While => Node::While(self.parseExpr(false)?, Box::new(self.parse()?)),
       Token::Putchar => Node::Putchar(self.parseExpr(false)?),
+      Token::Return => Node::Return(self.parseExpr(false)?),
 
       t => {
         return Err(DSAsmError::ParserError(format!("Unexpected '{}'", t)).into());
