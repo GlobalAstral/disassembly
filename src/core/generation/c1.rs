@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::core::{error::DSAsmError, generation::{Cell, Generator}, interpreter::Interpreter};
+use crate::core::{error::DSAsmError, generation::{Cell, Generator}, interpreter::Interpreter, tokenizer::Token};
 
 static CURR_LABEL: AtomicU64 = AtomicU64::new(0);
 fn generate_id() -> u64 {
@@ -40,16 +40,7 @@ impl Generator {
   }
   pub fn clear(&mut self, loc: u8) {
     self.goto(loc);
-    let lbl_id = generate_id();
-    let skip: &str = &format!("__{}_skip_clear", lbl_id);
-    self.jze(skip);
-    let temp: &str = &format!("__{}_clear", lbl_id);
-    self.create_label(temp);
-
-    self.goto(loc);
-    self.sub(1);
-    self.jnze(temp);
-    self.create_label(skip);
+    self.push(Token::Tilde);
   }
 
   pub fn r#move(&mut self, dst: u8, src: u8) {

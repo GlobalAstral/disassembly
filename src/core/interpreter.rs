@@ -134,6 +134,9 @@ impl Interpreter {
           self.stack[self.stack_ptr] = a / b;
           self.stack[bi] = a % b
         },
+        Token::Tilde => {
+          self.stack[self.stack_ptr] = 0;
+        }
         t => {
           return Err(DSAsmError::InterpreterError(format!("Unexpected Token '{}'", t)).into());
         }

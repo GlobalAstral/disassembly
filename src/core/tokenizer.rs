@@ -87,9 +87,9 @@ impl Tokenizer {
         '!' => Token::Exclamation,
         '$' => Token::Jnze,
         '^' => Token::Caret,
+        '~' => Token::Tilde,
 
         
-        '~' => Token::Tilde,
         '%' => Token::Percent,
         '=' => Token::Equals,
         '|' => Token::Pipe,
