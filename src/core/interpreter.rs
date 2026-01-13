@@ -11,7 +11,7 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-  pub const STACK_SIZE: usize = 1024;
+  pub const STACK_SIZE: usize = 256;
   pub fn new(content: Vec<Token>) -> Interpreter {
     Interpreter { 
       base: Processor::new(content),
@@ -19,6 +19,17 @@ impl Interpreter {
       stack_ptr: 0,
       labels: HashMap::new()
     }
+  }
+
+  pub fn print_memory(&self) {
+    let side: usize = (Interpreter::STACK_SIZE as f32).sqrt() as usize;
+    let maximum: &u8 = self.stack.iter().max().unwrap();
+    let digits: usize = maximum.to_string().len();
+    let hex_size_len: usize = std::mem::size_of::<u8>() * 2 + 2;
+    self.stack.chunks(side).enumerate().for_each(|(addr, value)| {
+      let temp: String = value.iter().map(|u| format!("{:0digits$}", u)).collect::<Vec<String>>().join(" | ") + " |";
+      println!("{:#0hex_size_len$X} | {}", addr * value.len(), temp);
+    });
   }
 
   fn get_identifier(&mut self) -> Result<String, DSAsmError> {
@@ -79,6 +90,13 @@ impl Interpreter {
           let name = self.get_identifier()?;
           self.label_must_not_exist(&name)?;
           if self.stack[self.stack_ptr] == 0 {
+            self.base.set_peek(self.labels[&name]);
+          }
+        },
+        Token::Jnze => {
+          let name = self.get_identifier()?;
+          self.label_must_not_exist(&name)?;
+          if self.stack[self.stack_ptr] != 0 {
             self.base.set_peek(self.labels[&name]);
           }
         },

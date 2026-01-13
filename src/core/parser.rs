@@ -7,7 +7,7 @@ struct Variable {
   pub name: String,
   pub id: u64,
 }
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BinaryOperator {
   Add, Sub, Mult, Div, Modulus, Equals, NotEquals, Greater, Less, Grequ, Lessequ, ShiftR, ShiftL, Band, Bor, Bxor, And, Or
 }
@@ -76,23 +76,23 @@ impl Display for UnaryOperator {
   }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum UnaryOperator {
   Negate, Not, Bnot
 }
-#[derive(Debug, Clone )]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Binary {
   left: Box<Expr>,
   right: Box<Expr>,
   operator: BinaryOperator 
 }
-#[derive(Debug, Clone )]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unary {
   right: Box<Expr>,
   operator: UnaryOperator
 }
 
-#[derive(Debug, Clone )]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
   Literal(u8),
   Variable(u64),
@@ -119,7 +119,7 @@ impl Display for Expr  {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ForLoop {
   var_name: String,
   start: Expr,
@@ -128,17 +128,19 @@ pub struct ForLoop {
   body: Box<Node>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Node {
   Scope(Vec<Node>),
-  VarDecl(String, Expr),
-  VarSet(String, Expr),
+  VarDecl(u64, Expr),
+  VarSet(u64, Expr),
   If(Expr, Box<Node>),
   While(Expr, Box<Node>),
   For(ForLoop),
   Putchar(Expr),
   MethodDecl(Method),
   Return(Expr),
+  #[default]
+  Invalid
 }
 
 impl Display for Node {
@@ -149,14 +151,15 @@ impl Display for Node {
         scope.iter().for_each(|node| {let _ = write!(f, "\t{}", node);});
         write!(f, "}}")?;
       },
-      Self::VarDecl(name, ex) => { write!(f, "let {} = {}", name, ex)?; },
-      Self::VarSet(name, ex) => { write!(f, "{} = {}", name, ex)?; },
+      Self::VarDecl(name, ex) => { write!(f, "let #{} = {}", name, ex)?; },
+      Self::VarSet(name, ex) => { write!(f, "#{} = {}", name, ex)?; },
       Self::Putchar(ex) => { write!(f, "putchar({})", ex)?; },
       Self::While(ex, body) => { write!(f, "while ({}) {}", ex, body)?; },
       Self::If(ex, body) => { write!(f, "if ({}) {}", ex, body)?; },
       Self::For(forloop) => { write!(f, "for ({} = {}; {}; {}) {}", forloop.var_name, forloop.start, forloop.condition, forloop.increment, forloop.body)?; },
       Self::MethodDecl(method) => { write!(f, "method {}[{}]({}) {}", method.name, method.id, method.parameters.join(", "), method.body)?; },
-      Self::Return(e) => { write!(f, "return {}", e)?; }
+      Self::Return(e) => { write!(f, "return {}", e)?; },
+      Self::Invalid => { write!(f, "Invalid")?; }
     };
     Ok(())
   }
@@ -166,7 +169,7 @@ static CURRENT_ID: AtomicU64 = AtomicU64::new(0);
 fn generate_id() -> u64 {
   CURRENT_ID.fetch_add(1, Ordering::Relaxed)
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Method {
   name: String,
   id: u64,
@@ -315,16 +318,17 @@ impl Parser {
           return Err(DSAsmError::ParserError(format!("Variable '{}' already exists", name)).into());
         };
         let var: Variable = Variable { name: name.clone(), id: generate_id() };
-        self.vars.push(var);
+        self.vars.push(var.clone());
         self.base.require(Token::Equals).map_err(|e| Err::<(), DSAsmError>(DSAsmError::ParserError(format!("{}", e)).into()))?;
-        Node::VarDecl(name, self.parseExpr(false)?)
+        Node::VarDecl(var.id, self.parseExpr(false)?)
       },
       Token::Identifier(name) => {
-        if self.vars.iter().find(|e| e.name == name).is_none() {
+        let var = self.vars.iter().find(|e| e.name == name);
+        if var.is_none() {
           return Err(DSAsmError::ParserError(format!("Variable '{}' does not exists", name)).into());
         };
         self.base.require(Token::Equals).map_err(|e| Err::<(), DSAsmError>(DSAsmError::ParserError(format!("{}", e)).into()))?;
-        Node::VarSet(name, self.parseExpr(false)?)
+        Node::VarSet(var.unwrap().id, self.parseExpr(false)?)
       },
       Token::For => {
         self.base.require(Token::OpenParen).map_err(|e| Err::<(), DSAsmError>(DSAsmError::ParserError(format!("{}", e)).into()))?;

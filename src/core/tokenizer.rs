@@ -16,6 +16,7 @@ pub enum Token {
   Star,
   Slash,
   Exclamation,
+  Jnze,
   Identifier(String),
 
   Literal(u8),
@@ -82,6 +83,8 @@ impl Tokenizer {
         '*' => Token::Star,
         '/' => Token::Slash,
         '!' => Token::Exclamation,
+        '$' => Token::Jnze,
+        
         '~' => Token::Tilde,
         '%' => Token::Percent,
         '=' => Token::Equals,
