@@ -33,8 +33,9 @@ impl Generator {
   }
 
   pub fn free(&mut self, addr: u8) {
-    if let Some(cell) = self.stack.iter_mut().nth(addr as usize) {
+    if let Some((addr, cell)) = self.stack.iter_mut().enumerate().nth(addr as usize) {
       *cell = Cell::Unused;
+      self.clear(addr as u8);
     }
   }
   pub fn clear(&mut self, loc: u8) {
@@ -86,5 +87,16 @@ impl Generator {
     self.free(temporary);
     self.goto(dst);
     Ok(())
+  }
+
+  pub fn free_temps(&mut self) {
+    let temp_indices: Vec<usize> = self.stack.iter()
+        .enumerate()
+        .filter_map(|(i, cell)| if cell.is_temp() { Some(i) } else { None })
+        .rev()
+        .collect();
+    temp_indices.iter().for_each(|addr| {
+      self.free(*addr as u8);
+    });
   }
 }

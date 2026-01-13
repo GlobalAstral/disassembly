@@ -2,22 +2,39 @@ use crate::core::{error::DSAsmError, generation::{Cell, Generator}, parser::{Exp
 
 
 impl Generator {
-  pub fn generate_expr(&mut self, expr: &Expr) -> Result<(), DSAsmError> {
+  pub fn generate_expr(&mut self, expr: &Expr) -> Result<u8, DSAsmError> {
 
     match expr {
       Expr::Literal(l) => {
+        let cell = self.alloc_temp()?;
+        self.clear(cell);
+        self.goto(cell);
         self.add(*l);
+        Ok(cell)
       },
       Expr::Variable(id) => {
+        let cell = self.alloc_temp()?;
         let (ptr, _) = self.stack.iter().enumerate().find(|(_, cell)| cell.is_variable_of_id(*id)).unwrap();
-        self.copy(self.pointer as u8, ptr as u8)?;
+        self.copy(cell, ptr as u8)?;
+        Ok(cell)
       },
+      Expr::UserInput => {
+        let cell = self.alloc_temp()?;
+        self.clear(cell);
+        self.goto(cell);
+        self.getchar();
+        Ok(cell)
+      },
+      // Expr::Reference(ex) => {
+      //   match ex {
+      //     Expr::Variable()
+      //   }
+      // }
       _ => {
         unimplemented!()
       }
     }
 
-    Ok(())
   }
 
   pub fn generate(&mut self, node: &Node) -> Result<(), DSAsmError> {
@@ -30,16 +47,16 @@ impl Generator {
       },
       Node::VarDecl(id, expr) => {
         let cell = self.alloc()?;
-        self.clear(cell);
-        self.goto(cell);
-        self.generate_expr(expr)?;
+        let ex = self.generate_expr(expr)?;
+        self.copy(cell, ex)?;
         self.stack[cell as usize] = Cell::Variable(*id);
+        self.free_temps();
       },
       Node::VarSet(id, expr) => {
         let (i, _) = self.stack.iter().enumerate().find(|(_, cell)| cell.is_variable_of_id(*id)).unwrap();
-        self.clear(i as u8);
-        self.goto(i as u8);
-        self.generate_expr(expr)?;
+        let ex = self.generate_expr(expr)?;
+        self.copy(i as u8, ex)?;
+        self.free_temps();
       },
 
       _ => {
