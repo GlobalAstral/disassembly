@@ -25,11 +25,21 @@ impl Generator {
         self.getchar();
         Ok(cell)
       },
-      // Expr::Reference(ex) => {
-      //   match ex {
-      //     Expr::Variable()
-      //   }
-      // }
+      Expr::Reference(ex) => {
+        match ex.as_ref() {
+          Expr::Variable(id) => {
+            let cell = self.alloc_temp()?;
+            let (ptr, _) = self.stack.iter().enumerate().find(|(_, cell)| cell.is_variable_of_id(*id)).unwrap();
+            self.clear(cell);
+            self.goto(cell);
+            self.add(ptr as u8);
+            Ok(cell)
+          },
+          _ => {
+            return Err(DSAsmError::CompilerError(format!("Cannot reference an unstable address {}", ex)));
+          }
+        }
+      },
       _ => {
         unimplemented!()
       }
