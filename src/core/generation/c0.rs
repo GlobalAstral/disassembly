@@ -1,17 +1,10 @@
-use crate::core::{generation::Generator, tokenizer::Token};
+use crate::core::{generation::Generator, interpreter::Interpreter, tokenizer::Token};
 
 impl Generator {
-  pub fn left(&mut self, amount: u8) {
-    for _ in 0..amount {
-      self.pointer = self.pointer.wrapping_sub(1);
-      self.push(Token::LeftAngle);
-    }
-  }
-  pub fn right(&mut self, amount: u8) {
-    for _ in 0..amount {
-      self.pointer = self.pointer.wrapping_add(1);
-      self.push(Token::RightAngle);
-    }    
+  pub fn goto(&mut self, addr: u8) {
+    self.pointer = addr;
+    self.push(Token::Caret);
+    self.push(Token::Literal(addr));
   }
   pub fn add(&mut self, val: u8) {
     for _ in 0..val {

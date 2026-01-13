@@ -8,20 +8,24 @@ fn generate_id() -> u64 {
 }
 
 impl Generator {
-  pub fn goto(&mut self, ptr: u8) {
-    if (ptr as usize) < Interpreter::STACK_SIZE {
-      let delta: i16 = (ptr as i16) - (self.pointer as i16);
-      if delta < 0 {
-        self.left((-delta) as u8);
-      } else if delta > 0 {
-        self.right(delta as u8);
-      }
-    }
+  pub fn left(&mut self) {
+    self.goto(self.pointer + 1);
   }
-
+  pub fn right(&mut self) {
+    self.goto(self.pointer - 1);
+  }
   pub fn alloc(&mut self) -> Result<u8, DSAsmError> {
     if let Some((i, cell)) = self.stack.iter_mut().enumerate().find(|(_, cell)| cell.is_unused()) {
       *cell = Cell::Used;
+      Ok(i as u8)
+    } else {
+      Err(DSAsmError::CompilerError("Not enough memory!".into()))
+    }
+  }
+
+  pub fn alloc_temp(&mut self) -> Result<u8, DSAsmError> {
+    if let Some((i, cell)) = self.stack.iter_mut().enumerate().find(|(_, cell)| cell.is_unused()) {
+      *cell = Cell::Temporary;
       Ok(i as u8)
     } else {
       Err(DSAsmError::CompilerError("Not enough memory!".into()))
@@ -33,10 +37,54 @@ impl Generator {
       *cell = Cell::Unused;
     }
   }
-  pub fn clear(&mut self) {
-    let temp: &str = &format!("__{}_clear", generate_id());
+  pub fn clear(&mut self, loc: u8) {
+    self.goto(loc);
+    let lbl_id = generate_id();
+    let skip: &str = &format!("__{}_skip_clear", lbl_id);
+    self.jze(skip);
+    let temp: &str = &format!("__{}_clear", lbl_id);
     self.create_label(temp);
+
+    self.goto(loc);
     self.sub(1);
     self.jnze(temp);
+    self.create_label(skip);
+  }
+
+  pub fn r#move(&mut self, dst: u8, src: u8) {
+    self.clear(dst);
+    let temp: &str = &format!("__{}_move", generate_id());
+    self.create_label(temp);
+    self.goto(dst);
+    self.add(1);
+    self.goto(src);
+    self.sub(1);
+    self.jnze(temp);
+  }
+
+  pub fn copy(&mut self, dst: u8, src: u8) -> Result<(), DSAsmError> {
+    let temporary = self.alloc_temp()?;
+    self.clear(temporary);
+    self.clear(dst);
+    
+    let temp: &str = &format!("__{}_copy", generate_id());
+    self.create_label(temp);
+    
+    self.goto(dst);
+    self.add(1);
+    
+    self.goto(temporary);
+    self.add(1);
+    
+    self.goto(src);
+    self.sub(1);
+    
+    self.jnze(temp);
+    
+    self.r#move(src, temporary);
+    
+    self.free(temporary);
+    self.goto(dst);
+    Ok(())
   }
 }

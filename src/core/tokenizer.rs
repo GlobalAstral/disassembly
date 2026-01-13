@@ -57,13 +57,15 @@ impl ProcessorInput for char { }
 pub struct Tokenizer {
   base: Processor<char>,
   line: usize,
+  comment: bool,
 }
 
 impl Tokenizer {
   pub fn new(content: Vec<char>) -> Tokenizer {
     Tokenizer { 
       base: Processor::new(content), 
-      line: 0
+      line: 0,
+      comment: false
     }
   }
 
@@ -84,11 +86,12 @@ impl Tokenizer {
         '/' => Token::Slash,
         '!' => Token::Exclamation,
         '$' => Token::Jnze,
+        '^' => Token::Caret,
+
         
         '~' => Token::Tilde,
         '%' => Token::Percent,
         '=' => Token::Equals,
-        '^' => Token::Caret,
         '|' => Token::Pipe,
         '&' => Token::Ampersand,
         '(' => Token::OpenParen,
@@ -97,11 +100,15 @@ impl Tokenizer {
         '}' => Token::CloseCurly,
         ';' => Token::Semicolon,
         ch => {
+          if ch == '#' {
+            self.comment = true;
+          }
           if ch == '\n' {
             self.line += 1;
+            self.comment = false;
             continue;
           }
-          if ch.is_whitespace() {
+          if self.comment || ch.is_whitespace() {
             continue;
           }
           if ch.is_alphabetic() {

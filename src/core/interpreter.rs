@@ -51,11 +51,30 @@ impl Interpreter {
   pub fn interpret(&mut self) -> Result<(), DSAsmError> {
     while self.base.has_peek() {
       match self.base.consume() {
-        Token::RightAngle => {
-          self.stack_ptr = (self.stack_ptr + 1) % Interpreter::STACK_SIZE;
+        Token::LabelDef => {
+          let name = self.get_identifier()?;
+          if self.labels.contains_key(&name) {
+            return Err(DSAsmError::InterpreterError(format!("Label '{}' already exists", &name)).into());
+          }
+          self.labels.insert(name, self.base.get_peek());
         },
-        Token::LeftAngle => {
-          self.stack_ptr = (self.stack_ptr - 1) % Interpreter::STACK_SIZE;
+        _ => {}
+      }
+    }
+    self.base.set_peek(0);
+    while self.base.has_peek() {
+      match self.base.consume() {
+        Token::Caret => {
+          let addr = match self.base.consume() {
+            Token::Literal(lit) => lit,
+            t => {
+              return Err(DSAsmError::InterpreterError(format!("Expected literal instead of {}", t)).into())
+            }
+          };
+          if addr as usize >= Interpreter::STACK_SIZE {
+            return Err(DSAsmError::InterpreterError(format!("Invalid address {}", addr)).into())
+          }
+          self.stack_ptr = addr as usize;
         },
         Token::Plus => {
           let tmp: u8 = self.stack[self.stack_ptr];
@@ -75,11 +94,7 @@ impl Interpreter {
           print!("{}", self.stack[self.stack_ptr] as char);
         },
         Token::LabelDef => {
-          let name = self.get_identifier()?;
-          if self.labels.contains_key(&name) {
-            return Err(DSAsmError::InterpreterError(format!("Label '{}' already exists", &name)).into());
-          }
-          self.labels.insert(name, self.base.get_peek());
+          self.base.consume();
         },
         Token::Jmp => {
           let name = self.get_identifier()?;
@@ -109,12 +124,12 @@ impl Interpreter {
         },
         Token::Star => {
           let a = self.stack[self.stack_ptr];
-          let b = self.stack[(self.stack_ptr + 1) % Interpreter::STACK_SIZE];
+          let b = self.stack[self.stack_ptr + 1];
           self.stack[self.stack_ptr] = a * b;
         },
         Token::Slash => {
           let a = self.stack[self.stack_ptr];
-          let bi = (self.stack_ptr + 1) % Interpreter::STACK_SIZE;
+          let bi = self.stack_ptr + 1;
           let b = self.stack[bi];
           self.stack[self.stack_ptr] = a / b;
           self.stack[bi] = a % b

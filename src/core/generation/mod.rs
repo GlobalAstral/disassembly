@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::core::{error::DSAsmError, interpreter::Interpreter, parser::Node, processor::{Processor, ProcessorInput}, tokenizer::Token};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
@@ -67,7 +69,7 @@ pub struct Generator {
   stack: Stack,
   pointer: u8,
   free_cache: Vec<u8>,
-  output: Vec<Token>
+  output: Vec<Token>,
 }
 
 impl Generator {
