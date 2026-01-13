@@ -9,6 +9,7 @@ pub enum DSAsmError {
   GenericError(String),
   FileError(String),
   ParserError(String),
+  CompilerError(String),
 }
 
 impl Display for DSAsmError {
@@ -21,6 +22,7 @@ impl Display for DSAsmError {
       DSAsmError::GenericError(e) => write!(f, "GenericError: {}", e),
       DSAsmError::FileError(e) => write!(f, "FileError: {}", e),
       DSAsmError::ParserError(e) => write!(f, "ParserError: {}", e),
+      DSAsmError::CompilerError(e) => write!(f, "CompilerError: {}", e),
     }
   }
 }

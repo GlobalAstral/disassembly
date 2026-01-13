@@ -1,6 +1,6 @@
 use std::{env::args, error::Error, fs::{self, File}, io::Read};
 
-use crate::core::{error::DSAsmError, interpreter::{self, Interpreter}, parser::Parser, tokenizer::Tokenizer};
+use crate::core::{error::DSAsmError, generation::Generator, interpreter::{self, Interpreter}, parser::Parser, tokenizer::Tokenizer};
 
 
 mod core;
@@ -34,7 +34,11 @@ fn main() -> Result<(), DSAsmError>{
       println!("\nNODES:");
       nodes.iter().for_each(|e| println!("{}", e));
     }
-    unimplemented!()
+    let mut generator = Generator::new(nodes);
+    let ret = generator.generate_all();
+    println!("\nMEMORY CELLS:");
+    generator.print_memory();
+    ret
   }?;
 
   if debug {
@@ -45,6 +49,11 @@ fn main() -> Result<(), DSAsmError>{
   let mut interpreter: Interpreter = Interpreter::new(tokens);
 
   interpreter.interpret()?;
+
+  if debug {
+    println!("\nAddress - Value:");
+    interpreter.print_memory();
+  }
 
   Ok(())
 }
