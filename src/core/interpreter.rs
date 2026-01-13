@@ -136,6 +136,17 @@ impl Interpreter {
         },
         Token::Tilde => {
           self.stack[self.stack_ptr] = 0;
+        },
+        Token::OpenSquare => {
+          let addr = match self.base.consume() {
+            Token::Literal(lit) => lit,
+            t => {
+              return Err(DSAsmError::InterpreterError(format!("Unexpected Token '{}', expected literal instead", t)).into());
+            }
+          };
+          let addr = self.stack[addr as usize];
+          self.base.require(Token::CloseSquare).map_err(|e| Err::<(), DSAsmError>(DSAsmError::TokenizerError(format!("{}", e))))?;
+          self.stack[self.stack_ptr] = self.stack[addr as usize];
         }
         t => {
           return Err(DSAsmError::InterpreterError(format!("Unexpected Token '{}'", t)).into());

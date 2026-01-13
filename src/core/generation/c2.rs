@@ -40,6 +40,16 @@ impl Generator {
           }
         }
       },
+      Expr::Dereference(ex) => {
+        let ex = self.generate_expr(&ex)?;
+        let cell = self.alloc_temp()?;
+        self.clear(cell);
+        self.goto(cell);
+        self.push(Token::OpenSquare);
+        self.push(Token::Literal(ex));
+        self.push(Token::CloseSquare);
+        Ok(cell)
+      }
       _ => {
         unimplemented!()
       }

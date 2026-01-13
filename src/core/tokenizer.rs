@@ -18,6 +18,8 @@ pub enum Token {
   Exclamation,
   Jnze,
   Identifier(String),
+  OpenSquare,
+  CloseSquare,
 
   Literal(u8),
   Ampersand,
@@ -88,6 +90,8 @@ impl Tokenizer {
         '$' => Token::Jnze,
         '^' => Token::Caret,
         '~' => Token::Tilde,
+        '[' => Token::OpenSquare,
+        ']' => Token::CloseSquare,
 
         
         '%' => Token::Percent,
