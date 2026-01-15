@@ -1,6 +1,6 @@
-use std::{env::args, error::Error, fs::{self, File}, io::Read};
+use std::{env::args, fs::{self, File}};
 
-use crate::core::{bytecode::BytecodeConverter, error::DSAsmError, generation::Generator, interpreter::{self, Interpreter}, parser::Parser, tokenizer::Tokenizer};
+use crate::core::{bytecode::BytecodeConverter, error::DSAsmError, generation::Generator, interpreter::{Interpreter}, parser::Parser, tokenizer::Tokenizer};
 
 
 mod core;
@@ -49,6 +49,11 @@ fn main() -> Result<(), DSAsmError>{
   let mut converter: BytecodeConverter = BytecodeConverter::new(tokens);
 
   let bytecode = converter.convert()?;
+
+  if debug {
+    println!("\nBYTECODE:");
+    bytecode.iter().for_each(|ins| println!("{}", ins));
+  }
 
   let mut interpreter: Interpreter = Interpreter::new(bytecode);
 

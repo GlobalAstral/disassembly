@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::core::{error::DSAsmError, generation::{Cell, Generator}, interpreter::Interpreter, tokenizer::Token};
+use crate::core::{error::DSAsmError, generation::{Cell, Generator}, interpreter::{Interpreter, MemoryUnit}, tokenizer::Token};
 
 static CURR_LABEL: AtomicU64 = AtomicU64::new(0);
 fn generate_id() -> u64 {
@@ -8,51 +8,45 @@ fn generate_id() -> u64 {
 }
 
 impl Generator {
-  pub fn left(&mut self) {
-    self.goto(self.pointer + 1);
-  }
-  pub fn right(&mut self) {
-    self.goto(self.pointer - 1);
-  }
-  pub fn alloc(&mut self) -> Result<u8, DSAsmError> {
+  pub fn alloc(&mut self) -> Result<MemoryUnit, DSAsmError> {
     if let Some((i, cell)) = self.stack.iter_mut().enumerate().find(|(_, cell)| cell.is_unused()) {
       *cell = Cell::Used;
-      Ok(i as u8)
+      Ok(i as MemoryUnit)
     } else {
       Err(DSAsmError::CompilerError("Not enough memory!".into()))
     }
   }
 
-  pub fn alloc_temp(&mut self) -> Result<u8, DSAsmError> {
+  pub fn alloc_temp(&mut self) -> Result<MemoryUnit, DSAsmError> {
     if let Some((i, cell)) = self.stack.iter_mut().enumerate().find(|(_, cell)| cell.is_unused()) {
       *cell = Cell::Temporary;
-      Ok(i as u8)
+      Ok(i as MemoryUnit)
     } else {
       Err(DSAsmError::CompilerError("Not enough memory!".into()))
     }
   }
 
-  pub fn alloc_param(&mut self, param_id: u64) -> Result<u8, DSAsmError> {
+  pub fn alloc_param(&mut self, param_id: u64) -> Result<MemoryUnit, DSAsmError> {
     if let Some((i, cell)) = self.stack.iter_mut().enumerate().find(|(_, cell)| cell.is_unused()) {
       *cell = Cell::Parameter(param_id);
-      Ok(i as u8)
+      Ok(i as MemoryUnit)
     } else {
       Err(DSAsmError::CompilerError("Not enough memory!".into()))
     }
   }
 
-  pub fn free(&mut self, addr: u8) {
+  pub fn free(&mut self, addr: MemoryUnit) {
     if let Some((addr, cell)) = self.stack.iter_mut().enumerate().nth(addr as usize) {
       *cell = Cell::Unused;
-      self.clear(addr as u8);
+      self.clear(addr as MemoryUnit);
     }
   }
-  pub fn clear(&mut self, loc: u8) {
+  pub fn clear(&mut self, loc: MemoryUnit) {
     self.goto(loc);
     self.push(Token::Tilde);
   }
 
-  pub fn r#move(&mut self, dst: u8, src: u8) {
+  pub fn r#move(&mut self, dst: MemoryUnit, src: MemoryUnit) {
     self.clear(dst);
     let temp: &str = &format!("__{}_move", generate_id());
     self.create_label(temp);
@@ -63,7 +57,7 @@ impl Generator {
     self.jnze(temp);
   }
 
-  pub fn copy(&mut self, dst: u8, src: u8) -> Result<(), DSAsmError> {
+  pub fn copy(&mut self, dst: MemoryUnit, src: MemoryUnit) -> Result<(), DSAsmError> {
     let temporary = self.alloc_temp()?;
     self.clear(temporary);
     self.clear(dst);
@@ -96,7 +90,7 @@ impl Generator {
         .rev()
         .collect();
     temp_indices.iter().for_each(|addr| {
-      self.free(*addr as u8);
+      self.free(*addr as MemoryUnit);
     });
   }
 }

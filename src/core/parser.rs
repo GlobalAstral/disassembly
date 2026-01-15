@@ -1,6 +1,6 @@
-use std::{default, fmt::Display, sync::atomic::{AtomicU64, Ordering}};
+use std::{fmt::Display, sync::atomic::{AtomicU64, Ordering}};
 
-use crate::core::{error::DSAsmError, interpreter::Interpreter, processor::Processor, tokenizer::Token};
+use crate::core::{error::DSAsmError, interpreter::MemoryUnit, processor::Processor, tokenizer::Token};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Variable {
@@ -94,7 +94,7 @@ pub struct Unary {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
-  Literal(u8),
+  Literal(MemoryUnit),
   Variable(u64),
   UserInput,
   Reference(Box<Expr>),

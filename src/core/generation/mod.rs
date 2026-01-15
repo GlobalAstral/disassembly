@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use crate::core::{error::DSAsmError, interpreter::Interpreter, parser::Node, processor::{Processor, ProcessorInput}, tokenizer::Token};
+use crate::core::{error::DSAsmError, interpreter::{Interpreter, MemoryUnit}, parser::Node, processor::{Processor, ProcessorInput}, tokenizer::Token};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 pub enum Cell {
@@ -71,19 +69,18 @@ impl ProcessorInput for Node { }
 pub struct Generator {
   base: Processor<Node>,
   stack: Stack,
-  pointer: u8,
-  free_cache: Vec<u8>,
+  pointer: MemoryUnit,
   output: Vec<Token>,
 }
 
 impl Generator {
   pub fn new(i: Vec<Node>) -> Generator {
-    Generator { base: Processor::new(i), stack: EMPTY_STACK, pointer: 0, free_cache: Vec::new(), output: Vec::new() }
+    Generator { base: Processor::new(i), stack: EMPTY_STACK, pointer: 0, output: Vec::new() }
   }
 
   pub fn print_memory(&self) {
     let side: usize = (Interpreter::STACK_SIZE as f32).sqrt() as usize;
-    let hex_size_len: usize = std::mem::size_of::<u8>() * 2 + 2;
+    let hex_size_len: usize = std::mem::size_of::<MemoryUnit>() * 2 + 2;
     self.stack.chunks(side).enumerate().for_each(|(addr, value)| {
       let temp: String = value.iter().map(|u: &Cell| format!("{:^4}", u.to_string())).collect::<Vec<String>>().join(" | ") + " |";
       println!("{:#0hex_size_len$X} | {}", addr * value.len(), temp);

@@ -1,22 +1,22 @@
-use crate::core::{generation::Generator, interpreter::Interpreter, tokenizer::Token};
+use crate::core::{generation::Generator, interpreter::{Interpreter, MemoryUnit}, tokenizer::Token};
 
 impl Generator {
-  pub fn goto(&mut self, addr: u8) {
+  pub fn goto(&mut self, addr: MemoryUnit) {
     self.pointer = addr;
     self.push(Token::Caret);
     self.push(Token::Literal(addr));
   }
-  pub fn add(&mut self, val: u8) {
+  pub fn add(&mut self, val: MemoryUnit) {
     for _ in 0..val {
       self.push(Token::Plus);
     }
   }
-  pub fn sub(&mut self, val: u8) {
+  pub fn sub(&mut self, val: MemoryUnit) {
     for _ in 0..val {
       self.push(Token::Minus);
     }
   }
-  pub fn goto_ins(&mut self, val: u8) {
+  pub fn goto_ins(&mut self, val: MemoryUnit) {
     self.push(Token::Minus);
     self.push(Token::RightAngle);
     self.push(Token::Literal(val));

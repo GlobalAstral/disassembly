@@ -1,11 +1,12 @@
-use std::{collections::HashMap, error::Error, io::{Read, Write, stdin, stdout}};
+use std::{collections::HashMap, io::{Read, Write, stdin, stdout}};
 
-use crate::core::{bytecode::Instruction, error::DSAsmError, processor::{Processor, ProcessorInput}, tokenizer::Token};
+use crate::core::{bytecode::Instruction, error::DSAsmError, processor::{Processor, ProcessorInput}};
 
+pub type MemoryUnit = u16;
 
 pub struct Interpreter {
   base: Processor<Instruction>,
-  stack: [u8; Interpreter::STACK_SIZE],
+  stack: [MemoryUnit; Interpreter::STACK_SIZE],
   stack_ptr: usize,
   labels: HashMap<String, usize>
 }
@@ -13,7 +14,11 @@ pub struct Interpreter {
 impl ProcessorInput for Instruction { }
 
 impl Interpreter {
-  pub const STACK_SIZE: usize = 256;
+  const MAX_STACK_SIZE: usize = 1024;
+  pub const STACK_SIZE: usize = {
+    let max = MemoryUnit::MAX as usize;
+    if max > Interpreter::MAX_STACK_SIZE { Interpreter::MAX_STACK_SIZE } else { max }
+  };
   pub fn new(content: Vec<Instruction>) -> Interpreter {
     Interpreter { 
       base: Processor::new(content),
@@ -25,9 +30,9 @@ impl Interpreter {
 
   pub fn print_memory(&self) {
     let side: usize = (Interpreter::STACK_SIZE as f32).sqrt() as usize;
-    let maximum: &u8 = self.stack.iter().max().unwrap();
+    let maximum: &MemoryUnit = self.stack.iter().max().unwrap();
     let digits: usize = maximum.to_string().len();
-    let hex_size_len: usize = std::mem::size_of::<u8>() * 2 + 2;
+    let hex_size_len: usize = std::mem::size_of::<MemoryUnit>() * 2 + 2;
     self.stack.chunks(side).enumerate().for_each(|(addr, value)| {
       let temp: String = value.iter().map(|u| format!("{:0digits$}", u)).collect::<Vec<String>>().join(" | ") + " |";
       println!("{:#0hex_size_len$X} | {}", addr * value.len(), temp);
@@ -42,6 +47,17 @@ impl Interpreter {
   }
 
   pub fn interpret(&mut self) -> Result<(), DSAsmError> {
+    while self.base.has_peek() {
+      match self.base.consume() {
+        Instruction::Label(name) => {
+          if self.labels.contains_key(&name) {
+            return Err(DSAsmError::InterpreterError(format!("Label '{}' already exists", &name)).into());
+          }
+          self.labels.insert(name, self.base.get_peek());
+        },
+        _ => { }
+      }
+    }
     self.base.set_peek(0);
     while self.base.has_peek() {
       match self.base.consume() {
@@ -52,28 +68,23 @@ impl Interpreter {
           self.stack_ptr = addr as usize;
         },
         Instruction::Increment(amount) => {
-          let tmp: u8 = self.stack[self.stack_ptr];
+          let tmp: MemoryUnit = self.stack[self.stack_ptr];
           self.stack[self.stack_ptr] = tmp.wrapping_add(amount);
         },
         Instruction::Decrement(amount) => {
-          let tmp: u8 = self.stack[self.stack_ptr];
+          let tmp: MemoryUnit = self.stack[self.stack_ptr];
           self.stack[self.stack_ptr] = tmp.wrapping_sub(amount);
         },
         Instruction::UserInput => {
           stdout().flush().ok();
           let mut buf: [u8; 1] = [0];
           stdin().read_exact(&mut buf).expect("Cannot read user input");
-          self.stack[self.stack_ptr] = buf[0];
+          self.stack[self.stack_ptr] = buf[0] as MemoryUnit;
         },
         Instruction::Print => {
-          print!("{}", self.stack[self.stack_ptr] as char);
+          print!("{}", (self.stack[self.stack_ptr] as u8) as char);
         },
-        Instruction::Label(name) => {
-          if self.labels.contains_key(&name) {
-            return Err(DSAsmError::InterpreterError(format!("Label '{}' already exists", &name)).into());
-          }
-          self.labels.insert(name, self.base.get_peek());
-        },
+        Instruction::Label(_) => { },
         Instruction::Jump(name) => {
           self.label_must_exist(&name)?;
           self.base.set_peek(self.labels[&name]);

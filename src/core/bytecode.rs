@@ -1,12 +1,12 @@
-use std::{fmt::Display, process::Output};
+use std::{fmt::Display};
 
-use crate::core::{error::DSAsmError, processor::Processor, tokenizer::Token};
+use crate::core::{error::DSAsmError, interpreter::MemoryUnit, processor::Processor, tokenizer::Token};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Default)]
 pub enum Instruction {
-  MoveStack(u8),
-  Increment(u8),
-  Decrement(u8),
+  MoveStack(MemoryUnit),
+  Increment(MemoryUnit),
+  Decrement(MemoryUnit),
   UserInput,
   Print,
   Label(String),
@@ -17,9 +17,8 @@ pub enum Instruction {
   Multiply,
   Divide,
   Clear,
-  Dereference(u8),
-  Goto(u8),
-  Skip,
+  Dereference(MemoryUnit),
+  Goto(MemoryUnit),
   #[default]
   Invalid
 }
@@ -48,7 +47,7 @@ impl BytecodeConverter {
     }
   }
 
-  fn get_literal(&mut self) -> Result<u8, DSAsmError> {
+  fn get_literal(&mut self) -> Result<MemoryUnit, DSAsmError> {
     match self.base.consume() {
       Token::Literal(lit) => Ok(lit),
       t => {
@@ -59,15 +58,6 @@ impl BytecodeConverter {
 
   pub fn convert(&mut self) -> Result<Vec<Instruction>, DSAsmError> {
     let mut output: Vec<Instruction> = Vec::new();
-
-    while self.base.has_peek() {
-      match self.base.consume() {
-        Token::LabelDef => {
-          output.push(Instruction::Label(self.get_identifier()?));
-        },
-        _ => { }
-      }
-    }
     self.base.set_peek(0);
     while self.base.has_peek() {
       let ins: Instruction = match self.base.consume() {
@@ -82,7 +72,7 @@ impl BytecodeConverter {
           }
         },
         Token::Plus => {
-          let mut count: u8 = 1;
+          let mut count: MemoryUnit = 1;
           while self.base.tryconsume(Token::Plus) {
             count += 1;
           };
@@ -99,7 +89,7 @@ impl BytecodeConverter {
           }
         },
         Token::Minus => {
-          let mut count: u8 = 1;
+          let mut count: MemoryUnit = 1;
           while self.base.tryconsume(Token::Minus) {
             count += 1;
           };
@@ -108,8 +98,7 @@ impl BytecodeConverter {
         Token::Comma => Instruction::UserInput,
         Token::Dot => Instruction::Print,
         Token::LabelDef => {
-          self.base.consume();
-          Instruction::Skip
+          Instruction::Label(self.get_identifier()?)
         },
         Token::Jmp => {
           Instruction::Jump(self.get_identifier()?)
@@ -133,9 +122,7 @@ impl BytecodeConverter {
           return Err(DSAsmError::ConverterError(format!("Unexpected Token '{}'", t)).into());
         }
       };
-      if ins != Instruction::Skip {
-        output.push(ins);
-      }
+      output.push(ins);
     }
     Ok(output)
   }

@@ -1,8 +1,8 @@
-use crate::core::{error::DSAsmError, generation::{Cell, Generator}, parser::{Expr, Node}, tokenizer::Token};
+use crate::core::{error::DSAsmError, generation::{Cell, Generator}, interpreter::MemoryUnit, parser::{Expr, Node}, tokenizer::Token};
 
 
 impl Generator {
-  pub fn generate_expr(&mut self, expr: &Expr) -> Result<u8, DSAsmError> {
+  pub fn generate_expr(&mut self, expr: &Expr) -> Result<MemoryUnit, DSAsmError> {
 
     match expr {
       Expr::Literal(l) => {
@@ -15,7 +15,7 @@ impl Generator {
       Expr::Variable(id) => {
         let cell = self.alloc_temp()?;
         let (ptr, _) = self.stack.iter().enumerate().find(|(_, cell)| cell.is_variable_of_id(*id)).unwrap();
-        self.copy(cell, ptr as u8)?;
+        self.copy(cell, ptr as MemoryUnit)?;
         Ok(cell)
       },
       Expr::UserInput => {
@@ -32,7 +32,7 @@ impl Generator {
             let (ptr, _) = self.stack.iter().enumerate().find(|(_, cell)| cell.is_variable_of_id(*id)).unwrap();
             self.clear(cell);
             self.goto(cell);
-            self.add(ptr as u8);
+            self.add(ptr as MemoryUnit);
             Ok(cell)
           },
           _ => {
@@ -75,7 +75,7 @@ impl Generator {
       Node::VarSet(id, expr) => {
         let (i, _) = self.stack.iter().enumerate().find(|(_, cell)| cell.is_variable_of_id(*id)).unwrap();
         let ex = self.generate_expr(expr)?;
-        self.copy(i as u8, ex)?;
+        self.copy(i as MemoryUnit, ex)?;
         self.free_temps();
       },
 

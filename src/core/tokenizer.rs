@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::core::{error::DSAsmError, processor::{Processor, ProcessorInput}};
+use crate::core::{error::DSAsmError, interpreter::MemoryUnit, processor::{Processor, ProcessorInput}};
 
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
 pub enum Token {
@@ -21,7 +21,7 @@ pub enum Token {
   OpenSquare,
   CloseSquare,
 
-  Literal(u8),
+  Literal(MemoryUnit),
   Ampersand,
   Tilde,
   Percent,
@@ -139,17 +139,17 @@ impl Tokenizer {
             while self.base.peek().is_digit(10) {
               buf.push(self.base.consume());
             };
-            let ret = buf.parse::<u8>().map_err(|e| Err::<u8, DSAsmError>(DSAsmError::ProcessorError(format!("{}", e)).into()))?;
+            let ret = buf.parse::<MemoryUnit>().map_err(|e| Err::<MemoryUnit, DSAsmError>(DSAsmError::TokenizerError(format!("{}", e)).into()))?;
             Token::Literal(ret)
           } else if ch == '0' && self.base.tryconsume('x') && self.base.peek().is_digit(16) {
             let mut buf = String::from(ch);
             while self.base.peek().is_digit(16) {
               buf.push(self.base.consume());
             };
-            let ret: u8 = u8::from_str_radix(&buf, 16).map_err(|e| Err::<u8, DSAsmError>(DSAsmError::ProcessorError(format!("{}", e)).into()))?;
+            let ret: MemoryUnit = MemoryUnit::from_str_radix(&buf, 16).map_err(|e| Err::<MemoryUnit, DSAsmError>(DSAsmError::TokenizerError(format!("{}", e)).into()))?;
             Token::Literal(ret)
           } else {
-            return Err(DSAsmError::ProcessorError(format!("Invalid token {}[{}]", ch, self.line)).into())
+            return Err(DSAsmError::TokenizerError(format!("Invalid token {}[{}]", ch, self.line)).into())
           }
         }
       };
