@@ -2,8 +2,8 @@ use std::{default, fmt::Display, sync::atomic::{AtomicU64, Ordering}};
 
 use crate::core::{error::DSAsmError, interpreter::Interpreter, processor::Processor, tokenizer::Token};
 
-#[derive(Debug, Clone)]
-struct Variable {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Variable {
   pub name: String,
   pub id: u64,
 }
@@ -157,7 +157,7 @@ impl Display for Node {
       Self::While(ex, body) => { write!(f, "while ({}) {}", ex, body)?; },
       Self::If(ex, body) => { write!(f, "if ({}) {}", ex, body)?; },
       Self::For(forloop) => { write!(f, "for ({} = {}; {}; {}) {}", forloop.var_name, forloop.start, forloop.condition, forloop.increment, forloop.body)?; },
-      Self::MethodDecl(method) => { write!(f, "method {}[{}]({}) {}", method.name, method.id, method.parameters.join(", "), method.body)?; },
+      Self::MethodDecl(method) => { write!(f, "method {}[{}]({}) {}", method.name, method.id, method.parameters.iter().map(|v| format!("{}#{}", v.name, v.id)).collect::<Vec<String>>().join(", "), method.body)?; },
       Self::Return(e) => { write!(f, "return {}", e)?; },
       Self::Invalid => { write!(f, "Invalid")?; }
     };
@@ -171,10 +171,10 @@ fn generate_id() -> u64 {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Method {
-  name: String,
-  id: u64,
-  parameters: Vec<String>,
-  body: Box<Node>
+  pub name: String,
+  pub id: u64,
+  pub parameters: Vec<Variable>,
+  pub body: Box<Node>
 }
 
 pub struct Parser {
@@ -374,7 +374,7 @@ impl Parser {
           }
         };
         self.base.require(Token::OpenParen).map_err(|e| Err::<(), DSAsmError>(DSAsmError::ParserError(format!("{}", e)).into()))?;
-        let mut params: Vec<String> = Vec::new();
+        let mut params: Vec<Variable> = Vec::new();
         let old = self.vars.clone();
         self.require_until(Token::CloseParen, |this| {
           if params.len() > 0 {
@@ -382,8 +382,9 @@ impl Parser {
           }
           match this.base.consume() {
             Token::Identifier(s) => {
-              params.push(s.clone());
-              this.vars.push(Variable { name: s, id: generate_id() });
+              let var: Variable = Variable {id: generate_id(), name: s.clone()};
+              this.vars.push(var.clone());
+              params.push(var);
               return Ok(())
             },
             t => {

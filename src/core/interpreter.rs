@@ -1,18 +1,20 @@
 use std::{collections::HashMap, error::Error, io::{Read, Write, stdin, stdout}};
 
-use crate::core::{error::DSAsmError, processor::Processor, tokenizer::Token};
+use crate::core::{bytecode::Instruction, error::DSAsmError, processor::{Processor, ProcessorInput}, tokenizer::Token};
 
 
 pub struct Interpreter {
-  base: Processor<Token>,
+  base: Processor<Instruction>,
   stack: [u8; Interpreter::STACK_SIZE],
   stack_ptr: usize,
   labels: HashMap<String, usize>
 }
 
+impl ProcessorInput for Instruction { }
+
 impl Interpreter {
   pub const STACK_SIZE: usize = 256;
-  pub fn new(content: Vec<Token>) -> Interpreter {
+  pub fn new(content: Vec<Instruction>) -> Interpreter {
     Interpreter { 
       base: Processor::new(content),
       stack: [0; Interpreter::STACK_SIZE],
@@ -32,16 +34,7 @@ impl Interpreter {
     });
   }
 
-  fn get_identifier(&mut self) -> Result<String, DSAsmError> {
-    match self.base.consume() {
-      Token::Identifier(id) => Ok(id),
-      t => {
-        Err(DSAsmError::InterpreterError(format!("Expected Identifier instead of '{}'", t)).into())
-      }
-    }
-  }
-
-  fn label_must_not_exist(&self, name: &str) -> Result<(), DSAsmError> {
+  fn label_must_exist(&self, name: &str) -> Result<(), DSAsmError> {
     if !self.labels.contains_key(&name.to_string()) {
       return Err(DSAsmError::InterpreterError(format!("Label '{}' does not exists", &name)).into());
     }
@@ -49,107 +42,85 @@ impl Interpreter {
   }
 
   pub fn interpret(&mut self) -> Result<(), DSAsmError> {
-    while self.base.has_peek() {
-      match self.base.consume() {
-        Token::LabelDef => {
-          let name = self.get_identifier()?;
-          if self.labels.contains_key(&name) {
-            return Err(DSAsmError::InterpreterError(format!("Label '{}' already exists", &name)).into());
-          }
-          self.labels.insert(name, self.base.get_peek());
-        },
-        _ => {}
-      }
-    }
     self.base.set_peek(0);
     while self.base.has_peek() {
       match self.base.consume() {
-        Token::Caret => {
-          let addr = match self.base.consume() {
-            Token::Literal(lit) => lit,
-            t => {
-              return Err(DSAsmError::InterpreterError(format!("Expected literal instead of {}", t)).into())
-            }
-          };
+        Instruction::MoveStack(addr) => {
           if addr as usize >= Interpreter::STACK_SIZE {
             return Err(DSAsmError::InterpreterError(format!("Invalid address {}", addr)).into())
           }
           self.stack_ptr = addr as usize;
         },
-        Token::Plus => {
+        Instruction::Increment(amount) => {
           let tmp: u8 = self.stack[self.stack_ptr];
-          self.stack[self.stack_ptr] = tmp.wrapping_add(1);
+          self.stack[self.stack_ptr] = tmp.wrapping_add(amount);
         },
-        Token::Minus => {
+        Instruction::Decrement(amount) => {
           let tmp: u8 = self.stack[self.stack_ptr];
-          self.stack[self.stack_ptr] = tmp.wrapping_sub(1);
+          self.stack[self.stack_ptr] = tmp.wrapping_sub(amount);
         },
-        Token::Comma => {
+        Instruction::UserInput => {
           stdout().flush().ok();
           let mut buf: [u8; 1] = [0];
           stdin().read_exact(&mut buf).expect("Cannot read user input");
           self.stack[self.stack_ptr] = buf[0];
         },
-        Token::Dot => {
+        Instruction::Print => {
           print!("{}", self.stack[self.stack_ptr] as char);
         },
-        Token::LabelDef => {
-          self.base.consume();
+        Instruction::Label(name) => {
+          if self.labels.contains_key(&name) {
+            return Err(DSAsmError::InterpreterError(format!("Label '{}' already exists", &name)).into());
+          }
+          self.labels.insert(name, self.base.get_peek());
         },
-        Token::Jmp => {
-          let name = self.get_identifier()?;
-          self.label_must_not_exist(&name)?;
+        Instruction::Jump(name) => {
+          self.label_must_exist(&name)?;
           self.base.set_peek(self.labels[&name]);
         },
-        Token::Jze => {
-          let name = self.get_identifier()?;
-          self.label_must_not_exist(&name)?;
+        Instruction::JumpZero(name) => {
+          self.label_must_exist(&name)?;
           if self.stack[self.stack_ptr] == 0 {
             self.base.set_peek(self.labels[&name]);
           }
         },
-        Token::Jnze => {
-          let name = self.get_identifier()?;
-          self.label_must_not_exist(&name)?;
+        Instruction::JumpNotZero(name) => {
+          self.label_must_exist(&name)?;
           if self.stack[self.stack_ptr] != 0 {
             self.base.set_peek(self.labels[&name]);
           }
         },
-        Token::Exclamation => {
+        Instruction::Invert => {
           if self.stack[self.stack_ptr] == 0 {
             self.stack[self.stack_ptr] = 1;
           } else {
             self.stack[self.stack_ptr] = 0;
           };
         },
-        Token::Star => {
+        Instruction::Multiply => {
           let a = self.stack[self.stack_ptr];
           let b = self.stack[self.stack_ptr + 1];
           self.stack[self.stack_ptr] = a * b;
         },
-        Token::Slash => {
+        Instruction::Divide => {
           let a = self.stack[self.stack_ptr];
           let bi = self.stack_ptr + 1;
           let b = self.stack[bi];
           self.stack[self.stack_ptr] = a / b;
           self.stack[bi] = a % b
         },
-        Token::Tilde => {
+        Instruction::Clear => {
           self.stack[self.stack_ptr] = 0;
         },
-        Token::OpenSquare => {
-          let addr = match self.base.consume() {
-            Token::Literal(lit) => lit,
-            t => {
-              return Err(DSAsmError::InterpreterError(format!("Unexpected Token '{}', expected literal instead", t)).into());
-            }
-          };
+        Instruction::Dereference(addr) => {
           let addr = self.stack[addr as usize];
-          self.base.require(Token::CloseSquare).map_err(|e| Err::<(), DSAsmError>(DSAsmError::TokenizerError(format!("{}", e))))?;
           self.stack[self.stack_ptr] = self.stack[addr as usize];
+        },
+        Instruction::Goto(ip) => {
+          self.base.set_peek(ip as usize);
         }
         t => {
-          return Err(DSAsmError::InterpreterError(format!("Unexpected Token '{}'", t)).into());
+          return Err(DSAsmError::InterpreterError(format!("Unexpected Instruction '{}'", t)).into());
         }
       }
     }

@@ -1,6 +1,6 @@
 use std::{env::args, error::Error, fs::{self, File}, io::Read};
 
-use crate::core::{error::DSAsmError, generation::Generator, interpreter::{self, Interpreter}, parser::Parser, tokenizer::Tokenizer};
+use crate::core::{bytecode::BytecodeConverter, error::DSAsmError, generation::Generator, interpreter::{self, Interpreter}, parser::Parser, tokenizer::Tokenizer};
 
 
 mod core;
@@ -46,7 +46,11 @@ fn main() -> Result<(), DSAsmError>{
     tokens.iter().for_each(|t| println!("{}", t));
   }
 
-  let mut interpreter: Interpreter = Interpreter::new(tokens);
+  let mut converter: BytecodeConverter = BytecodeConverter::new(tokens);
+
+  let bytecode = converter.convert()?;
+
+  let mut interpreter: Interpreter = Interpreter::new(bytecode);
 
   interpreter.interpret()?;
 

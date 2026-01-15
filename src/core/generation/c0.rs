@@ -16,6 +16,11 @@ impl Generator {
       self.push(Token::Minus);
     }
   }
+  pub fn goto_ins(&mut self, val: u8) {
+    self.push(Token::Minus);
+    self.push(Token::RightAngle);
+    self.push(Token::Literal(val));
+  }
   pub fn putchar(&mut self) {
     self.push(Token::Dot);
   }
