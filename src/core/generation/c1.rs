@@ -48,21 +48,32 @@ impl Generator {
 
   pub fn r#move(&mut self, dst: MemoryUnit, src: MemoryUnit) {
     self.clear(dst);
-    let temp: &str = &format!("__{}_move", generate_id());
+    let id = generate_id();
+    let temp: &str = &format!("__{}_move", id);
+    let skip: &str = &format!("__{}_skip_move", id);
+    self.goto(src);
+    self.jze(skip);
+
     self.create_label(temp);
     self.goto(dst);
     self.add(1);
     self.goto(src);
     self.sub(1);
     self.jnze(temp);
+    self.create_label(skip);
   }
 
   pub fn copy(&mut self, dst: MemoryUnit, src: MemoryUnit) -> Result<(), DSAsmError> {
+    self.clear(dst);
+    let id = generate_id();
+    let skip: &str = &format!("__{}_skip_copy", id);
+    self.goto(src);
+    self.jze(skip);
+
     let temporary = self.alloc_temp()?;
     self.clear(temporary);
-    self.clear(dst);
     
-    let temp: &str = &format!("__{}_copy", generate_id());
+    let temp: &str = &format!("__{}_copy", id);
     self.create_label(temp);
     
     self.goto(dst);
@@ -79,6 +90,9 @@ impl Generator {
     self.r#move(src, temporary);
     
     self.free(temporary);
+
+    self.create_label(skip);
+
     self.goto(dst);
     Ok(())
   }
@@ -92,5 +106,54 @@ impl Generator {
     temp_indices.iter().for_each(|addr| {
       self.free(*addr as MemoryUnit);
     });
+  }
+
+  pub fn mem_add(&mut self, dst: MemoryUnit, src: MemoryUnit) {
+    let id = generate_id();
+    let temp: &str = &format!("__{}_mem_add", id);
+    let skip: &str = &format!("__{}_skip_mem_add", id);
+    self.goto(src);
+    self.jze(skip);
+    self.create_label(temp);
+    self.goto(dst);
+    self.add(1);
+    self.goto(src);
+    self.sub(1);
+    self.jnze(temp);
+    self.create_label(skip);
+  }
+
+  pub fn mem_sub(&mut self, dst: MemoryUnit, src: MemoryUnit) {
+    let id = generate_id();
+    let temp: &str = &format!("__{}_mem_sub", id);
+    let skip: &str = &format!("__{}_skip_mem_sub", id);
+    self.goto(src);
+    self.jze(skip);
+    self.create_label(temp);
+    self.goto(dst);
+    self.jze(skip);
+    self.sub(1);
+    self.goto(src);
+    self.sub(1);
+    self.goto(src);
+    self.jnze(temp);
+    self.create_label(skip);
+  }
+
+  pub fn cmp(&mut self, l: MemoryUnit, r: MemoryUnit) {
+    self.goto(l);
+    self.push(Token::Apostrophe);
+    self.push(Token::Literal(r));
+  }
+
+  pub fn or(&mut self, l: MemoryUnit, r: MemoryUnit) {
+    self.goto(l);
+    self.push(Token::Or);
+    self.push(Token::Literal(r));
+  }
+
+  pub fn reduce(&mut self) {
+    self.push(Token::Exclamation);
+    self.push(Token::Exclamation);
   }
 }

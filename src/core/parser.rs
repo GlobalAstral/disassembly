@@ -8,8 +8,8 @@ pub struct Variable {
   pub id: u64,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BinaryOperator {
-  Add, Sub, Mult, Div, Modulus, Equals, NotEquals, Greater, Less, Grequ, Lessequ, ShiftR, ShiftL, Band, Bor, Bxor, And, Or
+pub enum BinaryOperator {
+  Add, Sub, Mult, Div, Modulus, Equals, NotEquals, Greater, Less, Grequ, Lessequ, ShiftR, ShiftL, Band, Bor, And, Or
 }
 
 impl BinaryOperator {
@@ -18,13 +18,12 @@ impl BinaryOperator {
       Self::Or => 0,
       Self::And => 1,
       Self::Bor => 2,
-      Self::Bxor => 3,
-      Self::Band => 4,
-      Self::Equals | Self::NotEquals => 5,
-      Self::Greater | Self::Less | Self::Grequ | Self::Lessequ => 6,
-      Self::ShiftL | Self::ShiftR => 7,
-      Self::Add | Self::Sub => 8,
-      Self::Mult | Self::Div | Self::Modulus => 9
+      Self::Band => 3,
+      Self::Equals | Self::NotEquals => 4,
+      Self::Greater | Self::Less | Self::Grequ | Self::Lessequ => 5,
+      Self::ShiftL | Self::ShiftR => 6,
+      Self::Add | Self::Sub => 7,
+      Self::Mult | Self::Div | Self::Modulus => 8
     }
   }
 }
@@ -36,7 +35,6 @@ impl BinaryOperator {
       BinaryOperator::And => "&&",
       BinaryOperator::Band => "&",
       BinaryOperator::Bor => "|",
-      BinaryOperator::Bxor => "^",
       BinaryOperator::Div => "/",
       BinaryOperator::Equals => "==",
       BinaryOperator::Greater => ">",
@@ -77,19 +75,19 @@ impl Display for UnaryOperator {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum UnaryOperator {
+pub enum UnaryOperator {
   Negate, Not, Bnot
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Binary {
-  left: Box<Expr>,
-  right: Box<Expr>,
-  operator: BinaryOperator 
+  pub left: Box<Expr>,
+  pub right: Box<Expr>,
+  pub operator: BinaryOperator 
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Unary {
-  right: Box<Expr>,
-  operator: UnaryOperator
+  pub right: Box<Expr>,
+  pub operator: UnaryOperator
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -208,7 +206,6 @@ impl Parser {
       Token::Ampersand => BinaryOperator::Band,
       Token::Pipe if self.base.tryconsume(Token::Pipe) => BinaryOperator::Or,
       Token::Pipe => BinaryOperator::Bor,
-      Token::Caret => BinaryOperator::Bxor,
       _ => {
         self.base.set_peek(old);
         return None

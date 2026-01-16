@@ -20,6 +20,9 @@ pub enum Token {
   Identifier(String),
   OpenSquare,
   CloseSquare,
+  Apostrophe,
+  Or,
+  Reduce,
 
   Literal(MemoryUnit),
   Ampersand,
@@ -92,6 +95,9 @@ impl Tokenizer {
         '~' => Token::Tilde,
         '[' => Token::OpenSquare,
         ']' => Token::CloseSquare,
+        '\'' => Token::Apostrophe,
+        '§' => Token::Or,
+        '°' => Token::Reduce,
 
         
         '%' => Token::Percent,

@@ -43,11 +43,13 @@ impl Generator {
     self.push(Token::Jnze);
     self.push(Token::Identifier(name.to_string()));
   }
-  pub fn mul(&mut self) {
+  pub fn mul(&mut self, r: MemoryUnit) {
     self.push(Token::Star);
+    self.push(Token::Literal(r));
   }
-  pub fn div(&mut self) {
+  pub fn div(&mut self, r: MemoryUnit) {
     self.push(Token::Slash);
+    self.push(Token::Literal(r));
   }
   pub fn invert(&mut self) {
     self.push(Token::Exclamation);

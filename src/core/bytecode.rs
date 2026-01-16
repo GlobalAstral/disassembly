@@ -14,11 +14,15 @@ pub enum Instruction {
   JumpZero(String),
   JumpNotZero(String),
   Invert,
-  Multiply,
-  Divide,
+  Multiply(MemoryUnit),
+  Divide(MemoryUnit),
   Clear,
   Dereference(MemoryUnit),
   Goto(MemoryUnit),
+  Compare(MemoryUnit),
+  ShiftL(MemoryUnit),
+  ShiftR(MemoryUnit),
+  Or(MemoryUnit),
   #[default]
   Invalid
 }
@@ -110,14 +114,18 @@ impl BytecodeConverter {
           Instruction::JumpNotZero(self.get_identifier()?)
         },
         Token::Exclamation => Instruction::Invert,
-        Token::Star => Instruction::Multiply,
-        Token::Slash => Instruction::Divide,
+        Token::Star => Instruction::Multiply(self.get_literal()?),
+        Token::Slash => Instruction::Divide(self.get_literal()?),
         Token::Tilde => Instruction::Clear,
         Token::OpenSquare => {
           let val = self.get_literal()?;
           self.base.require(Token::CloseSquare).map_err(|e| Err::<(), DSAsmError>(DSAsmError::ConverterError(format!("{}", e))))?;
           Instruction::Dereference(val)
         },
+        Token::Apostrophe => Instruction::Compare(self.get_literal()?),
+        Token::LeftAngle if self.base.tryconsume(Token::LeftAngle) => Instruction::ShiftL(self.get_literal()?),
+        Token::RightAngle if self.base.tryconsume(Token::RightAngle) => Instruction::ShiftR(self.get_literal()?),
+        Token::Or => Instruction::Or(self.get_literal()?),
         t => {
           return Err(DSAsmError::ConverterError(format!("Unexpected Token '{}'", t)).into());
         }

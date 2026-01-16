@@ -108,17 +108,16 @@ impl Interpreter {
             self.stack[self.stack_ptr] = 0;
           };
         },
-        Instruction::Multiply => {
+        Instruction::Multiply(addr) => {
           let a = self.stack[self.stack_ptr];
-          let b = self.stack[self.stack_ptr + 1];
+          let b = self.stack[addr as usize];
           self.stack[self.stack_ptr] = a * b;
         },
-        Instruction::Divide => {
+        Instruction::Divide(addr) => {
           let a = self.stack[self.stack_ptr];
-          let bi = self.stack_ptr + 1;
-          let b = self.stack[bi];
+          let b = self.stack[addr as usize];
           self.stack[self.stack_ptr] = a / b;
-          self.stack[bi] = a % b
+          self.stack[addr as usize] = a % b
         },
         Instruction::Clear => {
           self.stack[self.stack_ptr] = 0;
@@ -129,7 +128,25 @@ impl Interpreter {
         },
         Instruction::Goto(ip) => {
           self.base.set_peek(ip as usize);
-        }
+        },
+        Instruction::Compare(addr) => {
+          let left = self.stack[self.stack_ptr];
+          let right = self.stack[addr as usize];
+          let value = if left > right {1} else {2};
+          self.stack[self.stack_ptr] = value;
+            
+        },
+        Instruction::ShiftL(addr) => {
+          let temp = self.stack[addr as usize] % (std::mem::size_of::<MemoryUnit>() * 8) as MemoryUnit;
+          self.stack[self.stack_ptr] = self.stack[self.stack_ptr] << temp;
+        },
+        Instruction::ShiftR(addr) => {
+          let temp = self.stack[addr as usize] % (std::mem::size_of::<MemoryUnit>() * 8) as MemoryUnit;
+          self.stack[self.stack_ptr] = self.stack[self.stack_ptr] >> temp;
+        },
+        Instruction::Or(addr) => {
+          self.stack[self.stack_ptr] = self.stack[self.stack_ptr] | self.stack[addr as usize];
+        },
         t => {
           return Err(DSAsmError::InterpreterError(format!("Unexpected Instruction '{}'", t)).into());
         }
