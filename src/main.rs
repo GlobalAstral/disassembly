@@ -57,6 +57,13 @@ fn main() -> Result<(), DSAsmError>{
 
   let mut interpreter: Interpreter = Interpreter::new(bytecode);
 
+  //TODO Methods | Calls and Declaration
+  //TODO All the statements
+  //TODO Dereference value assign => *(Expr) = Value
+  //TODO Expression as statement
+  //TODO Think about structs (maybe force them as pointers and add some kind of low level stuff to access nearby fields)
+  //TODO Think about arrays (kinda like structs but change syntax. Maybe let them work the same but just different syntax)
+
   interpreter.interpret()?;
 
   if debug {
