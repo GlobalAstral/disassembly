@@ -1,4 +1,4 @@
-use crate::core::{error::DSAsmError, interpreter::{Interpreter, MemoryUnit}, parser::Node, processor::{Processor, ProcessorInput}, tokenizer::Token};
+use crate::core::{error::DSAsmError, interpreter::{Interpreter, MemoryUnit}, parser::{Method, Node}, processor::{Processor, ProcessorInput}, tokenizer::Token};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 pub enum Cell {
@@ -7,8 +7,6 @@ pub enum Cell {
   Used,
   Variable(u64),
   Temporary,
-  Return(u64),
-  Parameter(u64)
 }
 
 impl Cell {
@@ -24,8 +22,6 @@ impl Cell {
       Cell::Unused => "Unus".into(),
       Cell::Used => "Used".into(),
       Cell::Variable(id) => format!("#{:03}", id),
-      Cell::Parameter(id) => format!("§{:03}", id),
-      Cell::Return(id) => format!("r{:03}", id),
     }
   }
   pub fn is_used(&self) -> bool {

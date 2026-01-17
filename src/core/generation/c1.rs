@@ -26,15 +26,6 @@ impl Generator {
     }
   }
 
-  pub fn alloc_param(&mut self, param_id: u64) -> Result<MemoryUnit, DSAsmError> {
-    if let Some((i, cell)) = self.stack.iter_mut().enumerate().find(|(_, cell)| cell.is_unused()) {
-      *cell = Cell::Parameter(param_id);
-      Ok(i as MemoryUnit)
-    } else {
-      Err(DSAsmError::CompilerError("Not enough memory!".into()))
-    }
-  }
-
   pub fn free(&mut self, addr: MemoryUnit) {
     if let Some((addr, cell)) = self.stack.iter_mut().enumerate().nth(addr as usize) {
       *cell = Cell::Unused;
