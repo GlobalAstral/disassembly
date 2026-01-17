@@ -7,7 +7,7 @@ pub enum Cell {
   Used,
   Variable(u64),
   Temporary,
-  Return,
+  Return(u64),
   Parameter(u64)
 }
 
@@ -25,7 +25,7 @@ impl Cell {
       Cell::Used => "Used".into(),
       Cell::Variable(id) => format!("#{:03}", id),
       Cell::Parameter(id) => format!("§{:03}", id),
-      Cell::Return => "Rtrn".into(),
+      Cell::Return(id) => format!("r{:03}", id),
     }
   }
   pub fn is_used(&self) -> bool {
